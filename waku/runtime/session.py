@@ -38,6 +38,10 @@ Rules:
 - You can manage your own memory: use manage_memory to correct or forget facts,
   update_soul to save a standing preference the user gives you, and create_skill
   to save a repeatable workflow the user teaches you (only after they say yes).
+- If a "Relevant video resources" section is provided below, and one of the
+  videos actually answers the user's question, recommend it — name the video
+  and give its URL exactly as written there, never modified, shortened, or
+  invented. If nothing there is genuinely relevant, don't mention it.
 """
 
 
@@ -84,6 +88,9 @@ class Session:
             skills = self.memory.matching_skills(user_message)
             if skills:
                 parts.append("\nRelevant skill instructions:\n" + skills)
+            videos = self.memory.gated_video_lookup(user_message, notify=notify)
+            if videos:
+                parts.append("\nRelevant video resources:\n" + videos)
 
         return "\n".join(parts)
 
