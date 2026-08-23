@@ -175,6 +175,34 @@ function toolsResults(d){
                        : `<div class="card empty">no drafted messages</div>`;
   return h;
 }
+// Tools ▸ Jobs: recurring tasks (jobs/<name>/JOB.md) that cron triggers by
+// calling `waku job run <name>` — this tab lists them and lets you fire one
+// on demand, the same call path cron uses.
+function toolsJobs(d){
+  const jobs = d.jobs || [];
+  let h = `<div class="meta" style="margin-bottom:10px">Recurring tasks that run through the normal
+    harness. Add one by dropping a <code>JOB.md</code> under <code>jobs/&lt;name&gt;/</code>; nothing here
+    runs on a timer — cron (or launchd) calls <code>waku job run &lt;name&gt;</code> on the schedule below.
+    "Run now" triggers that exact same call.</div>`;
+  h += jobs.length ? jobs.map(j => `<div class="card">
+      <div class="u"><code>${esc(j.name)}</code> <span class="meta" style="font-weight:400">· cron <code>${esc(j.schedule)}</code></span></div>
+      <div class="r" style="margin-top:4px">${esc(j.prompt)}</div>
+      <div class="meta" style="margin-top:8px">last run: ${j.last_run ? esc(j.last_run) : "never"}</div>
+      <div style="margin-top:8px"><button class="save" data-job="${esc(j.name)}" onclick="runJobNow(this)">Run now</button>
+        <span class="meta" data-jobmsg="${esc(j.name)}" style="margin-left:10px"></span></div></div>`).join("")
+    : `<div class="card empty">no jobs found under jobs/</div>`;
+  return h;
+}
+async function runJobNow(btn){
+  const name = btn.dataset.job;
+  const msg = document.querySelector(`[data-jobmsg="${CSS.escape(name)}"]`);
+  btn.disabled = true;
+  if (msg) msg.textContent = "running…";
+  const r = await postJSON("/api/jobs/run", {name});
+  if (msg) msg.textContent = r.error ? ("Error: "+r.error) : ("Done — saved to "+r.outbox);
+  btn.disabled = false;
+  refresh();
+}
 // Tools ▸ MCP: external connectors. Shows live status + a copy-paste config so
 // anyone can plug in their own server (scalable, not a one-off).
 function toolsMCP(t){
@@ -544,9 +572,10 @@ const VIEWS = {
     const t = d.tools || {catalog:[], mcp:{configured:false,servers:[],live:false}, apple_on:false};
     sub = sub || "available";
     const tabs = [["available","Available",t.catalog.length],["results","Results"],
-      ["mcp","MCP",t.mcp.servers.length||null]];
+      ["jobs","Jobs",(d.jobs||[]).length||null],["mcp","MCP",t.mcp.servers.length||null]];
     let h = subtabBar("tools", tabs, sub);
     if (sub === "results") return h + toolsResults(d);
+    if (sub === "jobs") return h + toolsJobs(d);
     if (sub === "mcp") return h + toolsMCP(t);
     // Available: what the agent CAN do (grouped by origin), not just what it did.
     h += `<div class="meta" style="margin-bottom:12px">The capabilities the agent can call this turn.

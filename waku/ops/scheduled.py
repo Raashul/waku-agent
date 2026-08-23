@@ -71,6 +71,18 @@ def load_jobs() -> list[Job]:
     return jobs
 
 
+def _execute(job: Job) -> tuple[str, Path]:
+    """One `waku.respond()` call through the full loop, reply saved to the
+    outbox. Shared by the CLI and the dashboard's "run now" button so both
+    paths behave identically."""
+    waku = Waku()
+    result = waku.respond(job.prompt, source=job.source)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    out = waku.settings.home / "outbox" / f"{job.name}-{stamp}.txt"
+    out.write_text(result.reply + "\n", encoding="utf-8")
+    return result.reply, out
+
+
 def run_job(name: str) -> int:
     jobs = {job.name: job for job in load_jobs()}
     job = jobs.get(name)
@@ -78,14 +90,22 @@ def run_job(name: str) -> int:
         available = ", ".join(sorted(jobs)) or "none found"
         print(f"No job named {name!r}. Available: {available}", file=sys.stderr)
         return 1
-    waku = Waku()
-    result = waku.respond(job.prompt, source=job.source)
-    print(result.reply)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out = waku.settings.home / "outbox" / f"{job.name}-{stamp}.txt"
-    out.write_text(result.reply + "\n", encoding="utf-8")
+    reply, out = _execute(job)
+    print(reply)
     print(f"saved to {out}", file=sys.stderr)
     return 0
+
+
+def run_job_action(payload: dict) -> dict:
+    """The dashboard's "run now" button — same path as `waku job run <name>`,
+    JSON in/out so `dashboard.py` can wire it straight into its routes table."""
+    name = (payload.get("name") or "").strip()
+    jobs = {job.name: job for job in load_jobs()}
+    job = jobs.get(name)
+    if job is None:
+        return {"error": f"No job named {name!r}"}
+    reply, out = _execute(job)
+    return {"ok": True, "reply": reply, "outbox": out.name}
 
 
 def list_jobs() -> int:

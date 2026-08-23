@@ -35,6 +35,7 @@ POST_ROUTES = {
     "/api/compare/clear",
     "/api/compare/regrade",
     "/api/compare/delete_run",
+    "/api/jobs/run",
 }
 
 # Paths served on GET, either exactly or as a prefix.
@@ -81,7 +82,8 @@ def test_the_handlers_behind_the_routes_exist_and_are_callable():
     for name in ("collect", "chat", "chat_stream", "compare_stream", "graph_stream", "memory_action",
                  "apply_settings", "run_query", "session_action", "pin_action",
                  "list_models", "events_since", "reveal_path", "settings_info",
-                 "tools_info", "compare_clear", "compare_regrade", "compare_delete_run"):
+                 "tools_info", "compare_clear", "compare_regrade", "compare_delete_run",
+                 "run_job_action"):
         fn = getattr(dashboard, name, None)
         assert callable(fn), f"handler missing or not callable: {name}"
 
@@ -120,7 +122,7 @@ def test_collect_returns_the_keys_the_page_reads():
     frontend indexes into; dropping one blanks a tab with no error."""
     expected = {
         "settings", "tools", "facts", "episodes", "soul", "chat_log", "sessions",
-        "turns", "stats", "db", "skills", "trace_file", "chat_pending", "graph",
+        "turns", "stats", "db", "skills", "trace_file", "chat_pending", "graph", "jobs",
     }
     src = inspect.getsource(dashboard.collect)
     for key in expected:

@@ -84,6 +84,38 @@ def test_run_job_runs_through_waku_and_saves_outbox(tmp_path, monkeypatch):
     assert saved[0].read_text(encoding="utf-8") == "you're up 3% this week\n"
 
 
+def test_run_job_action_runs_through_waku_and_saves_outbox(tmp_path, monkeypatch):
+    monkeypatch.setattr(scheduled, "JOBS_DIR", tmp_path)
+    _write_job(tmp_path, "weekly-analysis", source="job:weekly-analysis",
+               prompt="Analyze my portfolio.")
+    home = tmp_path / "home"
+    (home / "outbox").mkdir(parents=True)
+
+    class FakeWaku:
+        def __init__(self):
+            self.settings = SimpleNamespace(home=home)
+
+        def respond(self, prompt, source="cli"):
+            return SimpleNamespace(reply="you're up 3% this week")
+
+    monkeypatch.setattr(scheduled, "Waku", FakeWaku)
+
+    result = scheduled.run_job_action({"name": "weekly-analysis"})
+
+    assert result["ok"] is True
+    assert result["reply"] == "you're up 3% this week"
+    assert (home / "outbox" / result["outbox"]).exists()
+
+
+def test_run_job_action_unknown_name_returns_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(scheduled, "JOBS_DIR", tmp_path)
+    _write_job(tmp_path, "weekly-analysis")
+
+    result = scheduled.run_job_action({"name": "nope"})
+
+    assert "error" in result
+
+
 def test_print_cron_prints_schedule_and_run_command(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(scheduled, "JOBS_DIR", tmp_path)
     _write_job(tmp_path, "weekly-analysis")

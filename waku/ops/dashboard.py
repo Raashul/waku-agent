@@ -51,6 +51,7 @@ from waku.ops.arena import (
 from waku.ops.browser_agent import agent_lock, dash_session, get_agent, maybe_rotate_session
 from waku.ops.catalog import list_models
 from waku.ops.pricing import price_for, usage_summary
+from waku.ops.scheduled import load_jobs, run_job_action
 from waku.ops.settings_api import apply_settings, pin_action, settings_info
 from waku.ops.tracing import TraceEncodingError, iter_trace_lines
 
@@ -397,6 +398,14 @@ def collect() -> dict:
     outbox = [{"name": p.name, "text": p.read_text(encoding="utf-8")[:400]}
               for p in sorted((home / "outbox").glob("*.txt"), reverse=True)[:20]]
 
+    # --- scheduled jobs: last_run comes from chat_log, the same "source" tag
+    # every gateway stamps on its turns — no separate job-run ledger to keep in sync.
+    jobs = [{"name": j.name, "schedule": j.schedule, "source": j.source, "prompt": j.prompt,
+             "last_run": conn.execute(
+                 "SELECT MAX(created_at) FROM chat_log WHERE source = ? AND role = 'user'",
+                 (j.source,)).fetchone()[0]}
+            for j in load_jobs()]
+
     # --- state.db introspection: the actual SQLite tables, so the persistence
     # layer is visible (not just its contents). Table names are hard-coded, so
     # the f-string SQL is safe.
@@ -478,6 +487,7 @@ def collect() -> dict:
         "consolidate_every": settings.consolidate_every,
         "calendar": rows('SELECT title, start, "end", attendees, created_at FROM calendar_events ORDER BY start'),
         "outbox": outbox,
+        "jobs": jobs,
         "skills": skills,
         "eval_report": eval_report,
         "eval_history": eval_history,
@@ -1130,7 +1140,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/connections": None, "/api/connections/test": None,
                   "/api/providers": None,
                   "/api/compare/clear": compare_clear,
-                  "/api/compare/regrade": compare_regrade, "/api/compare/delete_run": compare_delete_run}
+                  "/api/compare/regrade": compare_regrade, "/api/compare/delete_run": compare_delete_run,
+                  "/api/jobs/run": run_job_action}
         if self.path not in routes:
             self.send_response(404)
             self.end_headers()
