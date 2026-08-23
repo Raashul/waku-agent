@@ -93,20 +93,28 @@ def main(argv: list[str] | None = None) -> int:
     conn = connect(settings.home)
     store = VideoResourceStore(conn)
 
+    print(f"Resolving channel '{args.channel}'...", flush=True)
     uploads_playlist_id = _resolve_channel_id(args.channel, args.api_key)
+
+    print("Fetching video list...", flush=True)
+    items = list(_iter_playlist_items(uploads_playlist_id, args.api_key))
+    print(f"Found {len(items)} video(s). Embedding (one API call each, this is the slow part)...", flush=True)
+
     ingested = 0
-    for item in _iter_playlist_items(uploads_playlist_id, args.api_key):
+    for i, item in enumerate(items, 1):
         snippet = item["snippet"]
         video_id = snippet["resourceId"]["videoId"]
+        title = snippet.get("title", video_id)
+        print(f"  [{i}/{len(items)}] {title}...", end=" ", flush=True)
         store.upsert(
             video_id=video_id,
-            title=snippet.get("title", ""),
+            title=title,
             description=snippet.get("description", ""),
             url=f"https://youtu.be/{video_id}",
             published_at=snippet.get("publishedAt", ""),
         )
         ingested += 1
-        print(f"  {snippet.get('title', video_id)}")
+        print("done", flush=True)
 
     print(f"\nIngested {ingested} video(s) into {settings.home / 'state.db'} (video_resources table).")
     return 0

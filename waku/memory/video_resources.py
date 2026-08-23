@@ -58,7 +58,8 @@ class VideoResourceStore:
             import openai
 
             self._openai = openai.OpenAI(
-                base_url=OPENROUTER_BASE_URL, api_key=os.environ["OPENROUTER_API_KEY"]
+                base_url=OPENROUTER_BASE_URL, api_key=os.environ["OPENROUTER_API_KEY"],
+                timeout=30,  # fail fast rather than hang silently on a stuck call
             )
         return self._openai
 
