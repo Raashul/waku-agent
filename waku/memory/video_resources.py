@@ -12,16 +12,25 @@ overlap. So this store embeds title+description once at ingestion time
 At the scale this is built for (tens of videos), that's just a Python loop
 over rows already in memory — no vector index needed.
 
-    OPENAI_API_KEY=...   # embeddings only (text-embedding-3-small, 1536d)
+Embeddings go through OpenRouter rather than OpenAI directly — one key for
+both the channel's embeddings and (if WAKU_PROVIDER=openrouter) the main
+loop, and OpenRouter's /embeddings endpoint is OpenAI-response-shaped, so
+this is the same openai.OpenAI() client, just pointed at a different
+base_url:
+
+    OPENROUTER_API_KEY=...   # embeddings only, via openrouter.ai/api/v1
 """
 
 from __future__ import annotations
 
 import json
 import math
+import os
 import sqlite3
 
 from waku.memory.semantic.base import env_or
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -37,16 +46,20 @@ class VideoResourceStore:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
         self._openai = None
-        self.embed_model = env_or("OPENAI_EMBED_MODEL", "text-embedding-3-small")
+        # OpenRouter's own model id format ("<provider>/<model>"), not the
+        # bare "text-embedding-3-small" the direct-OpenAI stores use.
+        self.embed_model = env_or("WAKU_VIDEO_EMBED_MODEL", "openai/text-embedding-3-small")
 
     def _client(self):
         # Built lazily so importing/constructing this store never requires
-        # OPENAI_API_KEY unless something actually embeds — most turns never
-        # reach the gate that would.
+        # OPENROUTER_API_KEY unless something actually embeds — most turns
+        # never reach the gate that would.
         if self._openai is None:
             import openai
 
-            self._openai = openai.OpenAI()
+            self._openai = openai.OpenAI(
+                base_url=OPENROUTER_BASE_URL, api_key=os.environ["OPENROUTER_API_KEY"]
+            )
         return self._openai
 
     def _embed(self, text: str) -> list[float]:

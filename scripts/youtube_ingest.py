@@ -6,7 +6,9 @@
 
 Needs YOUTUBE_API_KEY (a YouTube Data API v3 key — console.cloud.google.com,
 enable "YouTube Data API v3", create an API key; no OAuth, no scopes, this
-only reads public channel data). See .env.example.
+only reads public channel data) and OPENROUTER_API_KEY (embeddings, via
+OpenRouter's /embeddings endpoint — see waku/memory/video_resources.py).
+See .env.example.
 
 For each video this stores title, description, url and an embedding
 (waku/memory/video_resources.py) in state.db, so the agent can later match a
