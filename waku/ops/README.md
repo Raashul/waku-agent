@@ -27,6 +27,7 @@ frontend.
 | `show_trace.py` | `waku trace` — reading those files back in the terminal. |
 | `release_gate.py` | `make gate`: deterministic must pass, judge must clear the threshold. |
 | `brief.py` | The morning brief. |
+| `scheduled.py` | `waku job run/list/cron` — recurring jobs (`jobs/<name>/JOB.md`), cron-triggered. |
 | `whiteboard/` | Excalidraw generators for the architecture diagrams in `docs/`. |
 
 ## Which way the arrows point

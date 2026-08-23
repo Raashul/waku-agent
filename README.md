@@ -417,7 +417,7 @@ something, but nothing is over-promised (they report "coming soon", and the dash
 | Graph workflows | [`waku/graph/`](waku/graph) | **live** behind `WAKU_GRAPH_WORKFLOWS=1` — [triage-first turns](#graph-workflows--when-a-turn-needs-shape) |
 | Terminal tool | `run_command` | skeleton — needs a real sandbox + safety surface first |
 | Browser tool | `browse_web` | skeleton — `search_web` already covers read-only lookups |
-| Cron Job | `schedule_task` | skeleton — `make brief` + a system cron line covers it today |
+| Cron Job | `waku job run <name>` | **live** — write `jobs/<name>/JOB.md`, cron it (`make job JOB=<name>`, or `waku job cron` for the line) |
 
 The point of a teaching repo is a readable core; these come alive one at a time, tested.
 

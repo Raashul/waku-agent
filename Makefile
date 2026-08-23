@@ -8,8 +8,8 @@
 # `source .venv/bin/activate` — both work, this is just fewer steps.
 PY := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python)
 
-.PHONY: run voice telegram discord brief dashboard trace eval eval-judge gate lint
-.PHONY: run voice telegram whatsapp brief dashboard trace eval eval-judge gate lint
+.PHONY: run voice telegram discord brief gather jobs job dashboard trace eval eval-judge gate lint
+.PHONY: run voice telegram whatsapp brief gather jobs job dashboard trace eval eval-judge gate lint
 
 run:            ## chat with Waku in the terminal
 	$(PY) -m waku
@@ -30,6 +30,13 @@ brief:          ## morning briefing from calendar + mail + memory (as a LOOP)
 
 gather:         ## same job as a GRAPH: 4 sources in parallel, then one digest
 	$(PY) -m waku gather
+
+jobs:           ## list recurring jobs (jobs/<name>/JOB.md) and their cron lines
+	$(PY) -m waku job list
+	$(PY) -m waku job cron
+
+job:            ## run one recurring job now: make job JOB=weekly-analysis
+	$(PY) -m waku job run $(JOB)
 
 # The server holds dashboard.py in memory: static JS/CSS reload on refresh, but
 # Python routes do NOT. After pulling a change that touches dashboard.py (or any

@@ -10,6 +10,9 @@
   waku brief                 morning briefing (calendar + mail + memory) — as a LOOP
   waku gather                same job as a GRAPH: github, web, calendar and
                              memory fetched together, then one digest
+  waku job run <name>        run one recurring job (jobs/<name>/JOB.md) — cron this
+  waku job list              show every job found under jobs/
+  waku job cron              print crontab lines for every job found
   waku skill install <url>   install a community skill
 """
 
@@ -56,6 +59,11 @@ def main() -> None:
         from waku.ops.gather import main as gather_main
 
         gather_main()
+    elif args[0] == "job":
+        from waku.ops.scheduled import main as job_main
+
+        sys.argv = [sys.argv[0], *args[1:]]
+        job_main()
     elif args[0] == "skill" and len(args) >= 3 and args[1] == "install":
         from waku.memory.procedural.installer import install
 
