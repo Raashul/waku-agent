@@ -105,10 +105,42 @@ def test_a_missing_query_falls_back_to_the_whole_message():
 
 
 def test_the_gate_asks_for_json_only_and_formats_the_message_in():
-    filled = GATE_PROMPT.format(message="how do I open a trading account?")
+    filled = GATE_PROMPT.format(topic_line="", message="how do I open a trading account?")
     assert "how do I open a trading account?" in filled
     assert "ONLY this JSON" in filled
     assert '"lookup"' in filled and '"query"' in filled and '"reason"' in filled
+
+
+def test_no_channel_topic_env_leaves_the_prompt_unchanged(monkeypatch):
+    monkeypatch.delenv("WAKU_CHANNEL_TOPIC", raising=False)
+    calls = []
+
+    class Capturing:
+        def __init__(self):
+            self.messages = SimpleNamespace(create=self._create)
+
+        def _create(self, **kw):
+            calls.append(kw)
+            return response([text_block('{"lookup": false, "query": "", "reason": "n/a"}')])
+
+    should_recommend_video(Capturing(), "small-model", "how do I open a trading account?")
+    assert "The channel covers:" not in calls[0]["messages"][0]["content"]
+
+
+def test_a_channel_topic_env_is_woven_into_the_prompt(monkeypatch):
+    monkeypatch.setenv("WAKU_CHANNEL_TOPIC", "personal finance education and the NEPSE stock market")
+    calls = []
+
+    class Capturing:
+        def __init__(self):
+            self.messages = SimpleNamespace(create=self._create)
+
+        def _create(self, **kw):
+            calls.append(kw)
+            return response([text_block('{"lookup": false, "query": "", "reason": "n/a"}')])
+
+    should_recommend_video(Capturing(), "small-model", "how do I open a trading account?")
+    assert "personal finance education and the NEPSE stock market" in calls[0]["messages"][0]["content"]
 
 
 def test_the_gate_is_exactly_one_model_call():

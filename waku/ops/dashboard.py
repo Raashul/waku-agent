@@ -420,7 +420,8 @@ def collect() -> dict:
         "tables": [table_info(n) for n in ("calendar_events", "facts", "episodes", "chat_log")]
                   # embedding is a ~1500-float JSON blob per row — useless in a
                   # table cell and heavy to ship on every dashboard load
-                  + [table_info("video_resources", exclude=("embedding",))],
+                  + [table_info("video_resources", exclude=("embedding",)),
+                     table_info("video_transcript_chunks", exclude=("embedding",))],
         "fts": [t for t in all_tables if t.endswith("_fts")],
         "all_tables": all_tables,
     }

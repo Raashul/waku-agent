@@ -29,6 +29,10 @@ def _memory_snapshot(conn: sqlite3.Connection) -> str:
     pending = conn.execute("SELECT COUNT(*) FROM chat_log WHERE consolidated = 0").fetchone()[0]
     video_count = conn.execute("SELECT COUNT(*) FROM video_resources").fetchone()[0]
     videos = conn.execute("SELECT title FROM video_resources ORDER BY id DESC LIMIT 5").fetchall()
+    transcript_chunk_count = conn.execute("SELECT COUNT(*) FROM video_transcript_chunks").fetchone()[0]
+    transcribed_videos = conn.execute(
+        "SELECT COUNT(DISTINCT video_id) FROM video_transcript_chunks"
+    ).fetchone()[0]
 
     lines = [f"Semantic facts ({fact_count})"]
     lines.extend(f"- [{row['subject']}] {row['content']}" for row in facts)
@@ -44,6 +48,7 @@ def _memory_snapshot(conn: sqlite3.Connection) -> str:
     lines.extend(f"- {row['title']}" for row in videos)
     if not videos:
         lines.append("- none yet — run scripts/youtube_ingest.py")
+    lines.append(f"  transcripts ingested: {transcribed_videos} video(s), {transcript_chunk_count} chunk(s)")
 
     lines.extend(["", f"Unconsolidated chat messages: {pending}"])
     return "\n".join(lines)

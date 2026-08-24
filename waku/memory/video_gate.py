@@ -20,12 +20,14 @@ import json
 
 import anthropic
 
+from waku.memory.semantic.base import env_or
+
 GATE_PROMPT = """\
 You are a gate deciding whether to search a library of educational YouTube \
 videos before answering. Given the user's message, decide if a video from \
 that library would help answer it — the kind of how-to or explainer question \
 a video would cover, not something that needs the user's personal facts or \
-current events.
+current events.{topic_line}
 
 Reply with ONLY this JSON, nothing else:
 {{"lookup": true/false, "query": "<search text if true, else empty>", "reason": "<5 words>"}}
@@ -44,10 +46,16 @@ def should_recommend_video(
     a rare gate error costs one extra embedding call, not a silently missing
     feature."""
     try:
+        # Channel-topic framing is configuration, not code — WAKU_CHANNEL_TOPIC
+        # is unset by default, so the prompt is byte-for-byte what it always
+        # was unless someone opts in to sharper context (e.g. a finance channel
+        # setting "personal finance education, NEPSE stock market, and the app").
+        topic = env_or("WAKU_CHANNEL_TOPIC", "")
+        topic_line = f" The channel covers: {topic}." if topic else ""
         response = client.messages.create(
             model=small_model,
             max_tokens=600,
-            messages=[{"role": "user", "content": GATE_PROMPT.format(message=message)}],
+            messages=[{"role": "user", "content": GATE_PROMPT.format(topic_line=topic_line, message=message)}],
         )
         text = "".join(b.text for b in response.content if b.type == "text")
         if "{" not in text:

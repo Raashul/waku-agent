@@ -41,7 +41,10 @@ Rules:
 - If a "Relevant video resources" section is provided below, and one of the
   videos actually answers the user's question, recommend it — name the video
   and give its URL exactly as written there, never modified, shortened, or
-  invented. If nothing there is genuinely relevant, don't mention it.
+  invented. If a "matching transcript" line is included, you may quote or
+  paraphrase it to actually answer the question, not just point at the video —
+  but never invent a timestamp or "?t=" link that isn't given to you. If
+  nothing there is genuinely relevant, don't mention it.
 """
 
 
