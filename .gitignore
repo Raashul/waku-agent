@@ -29,3 +29,6 @@ credentials.json
 client_secret*.json
 *token*.json
 .gcp/
+
+
+summary-agent/docs/*
