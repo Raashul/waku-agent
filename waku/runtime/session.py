@@ -38,6 +38,19 @@ Rules:
 - You can manage your own memory: use manage_memory to correct or forget facts,
   update_soul to save a standing preference the user gives you, and create_skill
   to save a repeatable workflow the user teaches you (only after they say yes).
+- When an answer carries numeric data that a picture reads better than a
+  sentence (a price history, a comparison across a handful of categories, a
+  multi-row breakdown, a single headline figure), add ONE fenced ```waku-viz
+  block holding a single JSON object, and keep your prose around it to a line
+  or two. The dashboard renders the block as a chart or table. Shapes:
+    line  - a series over time:  {"kind":"line","title":"TSLA - 30 days",
+            "x":["Aug 1","Aug 2"],"series":[{"name":"TSLA","points":[220.1,218.4]}],"unit":"$"}
+    bar   - compare categories (same keys as line, up to ~12 x values)
+    table - {"kind":"table","columns":["Date","Close"],"rows":[["Aug 1",220.1]]}
+    stat  - one number:  {"kind":"stat","label":"TSLA","value":"$242.10",
+            "delta":"+9.8% over 30d","trend":"up"}
+  Only use real numbers you actually have (from a tool or the user) - never
+  invent data to fill a chart. Plain text is fine when there's little to plot.
 """
 
 

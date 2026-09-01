@@ -12,6 +12,13 @@
 const esc = s => (s??"").toString().replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
+// Inverse of esc(). renderMarkdown() escapes the whole reply up front, so the
+// body of a ```waku-viz fence is escaped JSON by the time viz.js needs to
+// JSON.parse it — undo the five entities first. Order matters: &amp; last.
+const unesc = s => (s??"").toString()
+  .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"')
+  .replace(/&#39;/g,"'").replace(/&amp;/g,"&");
+
 // --- tiny markdown renderer for chat replies (no dependency, XSS-safe: we
 // escape first, then apply a small set of transforms the LLM actually uses:
 // bold/italic/code, links, ordered/unordered lists, and tables).
@@ -57,6 +64,12 @@ function renderMarkdown(text){
       const codeLines = [];
       while (i < lines.length && !/^\s*`{3,}\s*$/.test(lines[i])){ codeLines.push(lines[i]); i++; }
       if (i < lines.length) i++;   // skip closing ```
+      if (lang === "waku-viz" && typeof renderViz === "function"){   // a chart, not code
+        try {
+          const html = renderViz(JSON.parse(unesc(codeLines.join("\n"))));
+          if (html){ out.push(html); continue; }
+        } catch (e){ /* malformed spec → fall through and show it as a code block */ }
+      }
       const langLabel = lang ? `<span class="mdcode-lang">${lang}</span>` : "";
       out.push(`<div class="mdcode"><div class="mdcode-head">${langLabel}<button class="mdcode-copy" onclick="copyCode(this)">Copy</button></div><pre><code>${codeLines.join("\n")}</code></pre></div>`);
       continue;

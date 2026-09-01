@@ -6,6 +6,7 @@ session → loop. If you want to understand the repo in one place, start here.
 
 from __future__ import annotations
 
+from waku import viz
 from waku.config import Settings, load_settings
 from waku.db import connect
 from waku.loop.agent import LoopResult, Observer, run_loop
@@ -102,6 +103,12 @@ class Waku:
                 "model": self.settings.small_model if quick else self.settings.model,
                 "provider": self.settings.provider,
             }
+            # record any waku-viz block the reply carried (chart/table/stat) so
+            # the trace shows a turn drew something — the dashboard renders it
+            # straight from the reply text (waku/viz.py <-> static/js/viz.js).
+            viz_summary = viz.summarize(result.reply)
+            if viz_summary["blocks"]:
+                meta["viz"] = viz_summary
             self.session.add_exchange(user_message, result.reply, tool_calls=result.tool_calls,
                                       source=source, meta=meta)
             if self.memory is not None:

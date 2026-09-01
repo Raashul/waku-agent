@@ -17,6 +17,8 @@ for its own sake is not.
   AROUND the loop (the loop never changes; a graph node can BE a loop turn); every
   failure fails open to the plain loop
 - `waku/tools/` — create_event / save_note / send_message (flagship task only)
+- `waku/viz.py` — the `waku-viz` reply block (chart/table/stat spec); parser +
+  validator here, renderer in `ops/static/js/viz.js`. Not a tool — a convention.
 - `waku/memory/` — semantic (FTS5) / episodic / procedural (SKILL.md) +
   `retrieval_gate.py` (hero 1) + `consolidation.py` (every N exchanges)
 - `waku/ops/` — tracing (JSONL + OTel), dashboard (localhost:7777), release_gate,
