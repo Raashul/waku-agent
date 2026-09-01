@@ -400,13 +400,15 @@ def collect() -> dict:
     # --- state.db introspection: the actual SQLite tables, so the persistence
     # layer is visible (not just its contents). Table names are hard-coded, so
     # the f-string SQL is safe.
-    def table_info(name):
+    def table_info(name, exclude=()):
         info = conn.execute(f"PRAGMA table_info({name})").fetchall()
-        cols = [r["name"] for r in info]
-        types = {r["name"]: r["type"] for r in info}
+        cols = [r["name"] for r in info if r["name"] not in exclude]
+        types = {r["name"]: r["type"] for r in info if r["name"] not in exclude}
         count = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
         # up to 200 newest rows so each table has its own scrollable tab
-        sample = [dict(r) for r in conn.execute(f"SELECT * FROM {name} ORDER BY rowid DESC LIMIT 200").fetchall()]
+        select_cols = ", ".join(cols) if exclude else "*"
+        sample = [dict(r) for r in
+                  conn.execute(f"SELECT {select_cols} FROM {name} ORDER BY rowid DESC LIMIT 200").fetchall()]
         return {"name": name, "columns": cols, "types": types, "count": count, "sample": sample}
 
     db_path = home / "state.db"
@@ -415,7 +417,11 @@ def collect() -> dict:
     db_info = {
         "path": str(db_path.resolve()),
         "size": db_path.stat().st_size if db_path.exists() else 0,
-        "tables": [table_info(n) for n in ("calendar_events", "facts", "episodes", "chat_log")],
+        "tables": [table_info(n) for n in ("calendar_events", "facts", "episodes", "chat_log")]
+                  # embedding is a ~1500-float JSON blob per row — useless in a
+                  # table cell and heavy to ship on every dashboard load
+                  + [table_info("video_resources", exclude=("embedding",)),
+                     table_info("video_transcript_chunks", exclude=("embedding",))],
         "fts": [t for t in all_tables if t.endswith("_fts")],
         "all_tables": all_tables,
     }

@@ -17,10 +17,12 @@ from pathlib import Path
 import anthropic
 
 from waku.config import Settings
-from waku.memory import consolidation, retrieval_gate
+from waku.memory import consolidation, retrieval_gate, video_gate
 from waku.memory.episodic.store import SqliteEpisodeStore
 from waku.memory.procedural.loader import SkillLoader
 from waku.memory.semantic.store import SqliteFactStore
+from waku.memory.video_resources import VideoResourceStore
+from waku.memory.video_transcripts import TranscriptChunkStore
 
 
 def bundled_skill_dirs() -> list[Path]:
@@ -54,6 +56,8 @@ class Memory:
         self.facts = self._make_fact_store(conn, settings)
         self.episodes = episode_store if episode_store is not None else self._make_episode_store(conn, settings)
         self.skills = SkillLoader([*bundled_skill_dirs(), settings.home / "skills"])
+        self.videos = VideoResourceStore(conn)
+        self.transcripts = TranscriptChunkStore(conn)
 
     @staticmethod
     def _make_fact_store(conn, settings):
@@ -99,6 +103,36 @@ class Memory:
         found = self.facts.search(query, self.settings.retrieval_top_k)
         found += self.episodes.search(query, top_k=3)
         return "\n".join(found)
+
+    # ---- video resources (gated — see video_gate.py; stores: video_resources.py
+    # for title/desc, video_transcripts.py for the spoken content)
+    def gated_video_lookup(self, message: str, notify=None) -> str:
+        # A transcript chunk always joins to a video_resources row, so an
+        # empty videos table means an empty transcripts table too.
+        if self.videos.count() == 0:
+            return ""  # nothing ingested yet — skip the gate call, there's nothing to find
+        lookup, query, reason = video_gate.should_recommend_video(
+            self.client, self.settings.small_model, message
+        )
+        if notify:
+            notify("video_gate", {"decision": "lookup" if lookup else "skip", "reason": reason})
+        if not lookup:
+            return ""
+        # Check the transcript first — "first check if this can be answered
+        # from the transcript" — since it can point at content the title/
+        # description never mentioned. Fall back to the title/desc match for
+        # videos that don't have a transcript ingested yet.
+        chunks = self.transcripts.search(query)
+        if chunks:
+            match = chunks[0]
+            # url comes straight from the store, never the model — construct
+            # or paraphrase it and the link breaks, so the prompt tells the
+            # model to echo it verbatim.
+            return f'[video] {match["title"]} — {match["url"]}\nmatching transcript: "{match["chunk_text"]}"'
+        found = self.videos.search(query)
+        if not found:
+            return ""
+        return "\n".join(f"[video] {v['title']} — {v['url']}" for v in found)
 
     # ---- procedural
     def matching_skills(self, message: str) -> str:

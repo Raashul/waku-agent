@@ -27,6 +27,8 @@ const DB_DESC = {
   facts: "semantic memory — durable facts (Memory ▸ Semantic)",
   episodes: "episodic memory — dated summaries (Memory ▸ Episodic)",
   chat_log: "every message, tagged by session_id — consolidation reads from here",
+  video_resources: "YouTube channel catalog — scripts/youtube_ingest.py, matched by embedding search",
+  video_transcript_chunks: "chunked video transcripts — matched before title/desc, see video_transcripts.py",
 };
 const QUERY_EXAMPLES = [
   "SELECT role, content FROM chat_log ORDER BY id DESC LIMIT 10",

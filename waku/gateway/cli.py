@@ -27,6 +27,12 @@ def _memory_snapshot(conn: sqlite3.Connection) -> str:
         "SELECT happened_at, summary FROM episodes ORDER BY happened_at DESC, id DESC LIMIT 5"
     ).fetchall()
     pending = conn.execute("SELECT COUNT(*) FROM chat_log WHERE consolidated = 0").fetchone()[0]
+    video_count = conn.execute("SELECT COUNT(*) FROM video_resources").fetchone()[0]
+    videos = conn.execute("SELECT title FROM video_resources ORDER BY id DESC LIMIT 5").fetchall()
+    transcript_chunk_count = conn.execute("SELECT COUNT(*) FROM video_transcript_chunks").fetchone()[0]
+    transcribed_videos = conn.execute(
+        "SELECT COUNT(DISTINCT video_id) FROM video_transcript_chunks"
+    ).fetchone()[0]
 
     lines = [f"Semantic facts ({fact_count})"]
     lines.extend(f"- [{row['subject']}] {row['content']}" for row in facts)
@@ -38,6 +44,12 @@ def _memory_snapshot(conn: sqlite3.Connection) -> str:
     if not episodes:
         lines.append("- none yet")
 
+    lines.extend(["", f"Video resources ({video_count})"])
+    lines.extend(f"- {row['title']}" for row in videos)
+    if not videos:
+        lines.append("- none yet — run scripts/youtube_ingest.py")
+    lines.append(f"  transcripts ingested: {transcribed_videos} video(s), {transcript_chunk_count} chunk(s)")
+
     lines.extend(["", f"Unconsolidated chat messages: {pending}"])
     return "\n".join(lines)
 
@@ -48,6 +60,8 @@ def _observer(kind: str, event: dict) -> None:
         console.print(f"  [dim]tool · {event['tool']}({event['args']}) → {event['output'][:80]}[/dim]")
     elif kind == "gate":
         console.print(f"  [dim]gate · {event['decision']} — {event.get('reason','')}[/dim]")
+    elif kind == "video_gate":
+        console.print(f"  [dim]video_gate · {event['decision']} — {event.get('reason','')}[/dim]")
     elif kind == "consolidation":
         console.print(f"  [dim]memory · consolidated {event['new_facts']} fact(s) from recent chats[/dim]")
 

@@ -74,6 +74,38 @@ CREATE TABLE IF NOT EXISTS chat_log (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Video resources: a YouTube channel's catalog (title/description/url +
+-- an embedding), ingested by scripts/youtube_ingest.py. Deliberately its own
+-- table, not `facts` — this is a content catalog, not a durable claim about
+-- the user, so manage_memory/consolidation must never see or touch it.
+CREATE TABLE IF NOT EXISTS video_resources (
+    id INTEGER PRIMARY KEY,
+    video_id TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL,
+    published_at TEXT,
+    embedding TEXT NOT NULL,       -- JSON list of floats (OPENAI_EMBED_MODEL)
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Transcript chunks for a video_resources row: the actual spoken content,
+-- chunked and embedded so a question the title/description never mentions
+-- can still match. No timestamp columns — source transcripts are plain text
+-- with no per-line times (see waku/memory/video_transcripts.py). A chunk is
+-- only meaningful joined back to its video_resources row for title/url, so
+-- title/description ingest for a video must happen before or alongside its
+-- transcript ingest.
+CREATE TABLE IF NOT EXISTS video_transcript_chunks (
+    id INTEGER PRIMARY KEY,
+    video_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(video_id, chunk_index)
+);
+
 -- Portfolio demo: a small, hand-seeded set of holdings the
 -- get_portfolio_performance tool reads. Read-only (no write tool yet) —
 -- price_yesterday/average_price are fixed baselines, not refreshed daily,
