@@ -546,7 +546,8 @@ _FLAGSHIP = {"create_event", "list_events", "save_note", "send_message"}
 _SELFMGMT = {"manage_memory", "update_soul", "create_skill"}
 _APPLE = {"read_apple_calendar", "read_apple_mail", "create_reminder", "create_note"}
 _WEB = {"search_web"}
-_FINANCE = {"get_stock_price", "get_portfolio_performance", "analyze_quarterly_report"}
+_FINANCE = {"get_stock_price", "get_portfolio_performance", "analyze_quarterly_report",
+            "get_stock_history"}
 
 
 def _tool_source(name: str, mcp_servers: list[str]) -> str:
@@ -624,6 +625,7 @@ def tools_info() -> dict:
                  calendar.make_list_tool(conn),
                  notes.make_tool(conn), messages.make_tool(settings.home),
                  search.make_tool(), financial_reports.make_tool(),
+                 stocks.make_history_tool(),
                  memory_admin.make_update_soul_tool(settings)]
         if mem is not None:
             tools += [memory_admin.make_manage_memory_tool(mem),

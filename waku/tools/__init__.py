@@ -37,6 +37,10 @@ def build_registry(conn: sqlite3.Connection, settings: Settings, memory=None) ->
     # so it's always registered, unlike the Finnhub-backed tools below.
     registry.register(financial_reports.make_tool())
 
+    # Daily price history for charting — keyless (Yahoo's unofficial chart
+    # endpoint; see stocks.py), so always registered like search_web.
+    registry.register(stocks.make_history_tool())
+
     # Stock quotes — only registered when a key is set (no keyless fallback
     # exists, so a tool that can never succeed shouldn't ship to the model).
     if settings.finnhub_api_key:
