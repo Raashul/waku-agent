@@ -13,9 +13,9 @@ normalize instead of falling through to raw JSON.
 
 from __future__ import annotations
 
+from waku import viz
 from waku.config import load_settings
 from waku.runtime.session import Session
-from waku import viz
 
 _LINE = """Tesla is up over the month.
 

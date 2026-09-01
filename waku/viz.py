@@ -46,6 +46,36 @@ def _is_number_list(value) -> bool:
     )
 
 
+def _normalize(obj: dict) -> dict:
+    """Fold the two shape deviations a live model actually produces into the
+    canonical form before validation: `type` used for `kind`, and a series
+    `data` of [label, value] pairs instead of a top-level `x` plus per-series
+    `points`. Anything else is left for validate_spec to accept or reject."""
+    obj = dict(obj)
+    if "kind" not in obj and isinstance(obj.get("type"), str):
+        obj["kind"] = obj.pop("type")
+
+    series = obj.get("series")
+    if isinstance(series, list) and any(
+        isinstance(s, dict) and isinstance(s.get("data"), list) for s in series
+    ):
+        x = obj.get("x") if isinstance(obj.get("x"), list) else []
+        rebuilt = []
+        for s in series:
+            pairs = s.get("data") if isinstance(s, dict) else None
+            if isinstance(pairs, list) and all(
+                isinstance(p, (list, tuple)) and len(p) == 2 for p in pairs
+            ):
+                if not x:
+                    x = [p[0] for p in pairs]
+                rebuilt.append({"name": s.get("name"), "points": [p[1] for p in pairs]})
+            else:
+                rebuilt.append(s)
+        obj["series"] = rebuilt
+        obj["x"] = x
+    return obj
+
+
 def _clean_series(raw) -> list[dict] | None:
     if not isinstance(raw, list) or not raw:
         return None
@@ -67,6 +97,7 @@ def validate_spec(obj) -> dict | None:
     number), which is what turns one bad block into a blank page."""
     if not isinstance(obj, dict):
         return None
+    obj = _normalize(obj)
     kind = obj.get("kind")
     if kind not in VIZ_KINDS:
         return None

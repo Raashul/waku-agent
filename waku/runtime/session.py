@@ -38,20 +38,30 @@ Rules:
 - You can manage your own memory: use manage_memory to correct or forget facts,
   update_soul to save a standing preference the user gives you, and create_skill
   to save a repeatable workflow the user teaches you (only after they say yes).
-- When an answer carries numeric data that a picture reads better than a
-  sentence (a price history, a comparison across a handful of categories, a
-  multi-row breakdown, a single headline figure), add ONE fenced ```waku-viz
-  block holding a single JSON object, and keep your prose around it to a line
-  or two. The dashboard renders the block as a chart or table. Shapes:
-    line  - a series over time:  {"kind":"line","title":"TSLA - 30 days",
-            "x":["Aug 1","Aug 2"],"series":[{"name":"TSLA","points":[220.1,218.4]}],"unit":"$"}
-    bar   - compare categories (same keys as line, up to ~12 x values)
-    table - {"kind":"table","columns":["Date","Close"],"rows":[["Aug 1",220.1]]}
-    stat  - one number:  {"kind":"stat","label":"TSLA","value":"$242.10",
-            "delta":"+9.8% over 30d","trend":"up"}
-  Only use real numbers you actually have (from a tool or the user) - never
-  invent data to fill a chart. Plain text is fine when there's little to plot.
 """
+
+# A rendering contract, not persona — so it is appended by build_system every
+# turn rather than baked into SOUL.md, which load_soul only writes on a fresh
+# install and the user is free to rewrite. The exact key names matter; the
+# dashboard's renderer keys on them (waku/viz.py <-> ops/static/js/viz.js).
+VIZ_INSTRUCTIONS = """\
+When an answer carries numeric data that a picture reads better than a sentence
+(a price history, a comparison across a handful of categories, a multi-row
+breakdown, a single headline figure), add ONE fenced ```waku-viz block holding
+a single JSON object, and keep your prose around it to a line or two. The
+dashboard renders the block as a chart or table. Use these key names exactly:
+  line  - a series over time. One or more series share one x axis:
+          {"kind":"line","title":"TSLA vs NVDA - 30 days","x":["Aug 1","Aug 2"],
+           "series":[{"name":"TSLA","points":[220.1,218.4]},
+                     {"name":"NVDA","points":[418.0,421.3]}],"unit":"$"}
+  bar   - compare categories (same keys as line, up to ~12 x values)
+  table - {"kind":"table","columns":["Date","Close"],"rows":[["Aug 1",220.1]]}
+  stat  - one number: {"kind":"stat","label":"TSLA","value":"$242.10",
+          "delta":"+9.8% over 30d","trend":"up"}
+It is "kind", not "type". Points are plain numbers under "points" against a
+shared "x" - not [date, value] pairs. Only use real numbers you actually have
+(from a tool or the user); never invent data to fill a chart. Plain text is
+fine when there is little to plot."""
 
 
 def load_soul(settings: Settings) -> str:
@@ -85,7 +95,8 @@ class Session:
                  # is the first question every curious user asks
                  (f"Your model: you are running on '{self.settings.model}' via the "
                  f"'{self.settings.provider}' provider, inside Waku, a local-first "
-                 f"open-source agent harness (github.com/ShenSeanChen/waku-agent).")]
+                 f"open-source agent harness (github.com/ShenSeanChen/waku-agent)."),
+                 "\n" + VIZ_INSTRUCTIONS]
 
         if self.memory is not None:
             # Hero moment #1: a cheap judge decides IF we retrieve at all —

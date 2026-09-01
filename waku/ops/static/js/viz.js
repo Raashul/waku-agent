@@ -30,8 +30,31 @@ function vizFigure(spec, inner){
   return `<figure class="viz">${title}<div class="viz-body">${inner}</div>${cap}</figure>`;
 }
 
+// Fold the deviations a live model actually produces into the canonical shape:
+// `type` for `kind`, and a series `data` of [label, value] pairs instead of a
+// top-level `x` plus per-series `points`. Mirrors _normalize in waku/viz.py.
+function vizNormalize(spec){
+  spec = Object.assign({}, spec);
+  if (spec.kind == null && typeof spec.type === "string") spec.kind = spec.type;
+
+  const series = spec.series;
+  if (Array.isArray(series) && series.some(s => s && Array.isArray(s.data))){
+    let x = Array.isArray(spec.x) ? spec.x : [];
+    spec.series = series.map(s => {
+      const pairs = s && Array.isArray(s.data)
+        ? s.data.filter(p => Array.isArray(p) && p.length === 2) : null;
+      if (!pairs) return s;
+      if (!x.length) x = pairs.map(p => String(p[0]));
+      return { name: s.name, points: pairs.map(p => Number(p[1])) };
+    });
+    spec.x = x;
+  }
+  return spec;
+}
+
 function renderViz(spec){
   try {
+    spec = vizNormalize(spec);
     if (spec.kind === "line" || spec.kind === "bar") return vizFigure(spec, vizChart(spec));
     if (spec.kind === "table") return vizFigure(spec, vizTable(spec));
     if (spec.kind === "stat")  return vizFigure(spec, vizStat(spec));
