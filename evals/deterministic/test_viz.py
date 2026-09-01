@@ -5,14 +5,17 @@ it as a chart or table (waku/ops/static/js/viz.js). The failure that matters:
 one malformed spec must not blank the page. So what's pinned here is that
 validate_spec is a TYPE gate (a string where a number is charted is rejected,
 ragged-but-typed data is allowed through), that parse_viz_blocks silently
-drops bad blocks and keeps good ones, and that summarize() counts them the way
-the turn's telemetry reports.
+drops bad blocks and keeps good ones, that summarize() counts them the way
+the turn's telemetry reports, and that the two shape deviations a live model
+actually produced ("type" for "kind", [label, value] pairs for x + points)
+normalize instead of falling through to raw JSON.
 """
 
 from __future__ import annotations
 
+from waku.config import load_settings
+from waku.runtime.session import Session
 from waku import viz
-from waku.runtime.session import DEFAULT_SOUL
 
 _LINE = """Tesla is up over the month.
 
@@ -85,7 +88,34 @@ def test_summarize_counts_every_block_and_its_kind():
     assert summ == {"blocks": 2, "rendered": 2, "errors": 0, "kinds": ["line", "stat"]}
 
 
+def test_normalizes_the_shape_a_live_model_actually_produced():
+    # verbatim from a dashboard turn: "type" not "kind", and each series
+    # carrying [date, price] pairs instead of x + points. It used to fall
+    # through to a raw-JSON code block.
+    spec = {
+        "type": "line",
+        "title": "TSLA vs NVDA",
+        "x_label": "Date",
+        "series": [
+            {"name": "TSLA", "data": [["2026-08-03", 322.08], ["2026-08-04", 327.35]]},
+            {"name": "NVDA", "data": [["2026-08-03", 206.64], ["2026-08-04", 211.94]]},
+        ],
+    }
+    out = viz.validate_spec(spec)
+    assert out is not None
+    assert out["kind"] == "line"
+    assert out["x"] == ["2026-08-03", "2026-08-04"]
+    assert out["series"] == [
+        {"name": "TSLA", "points": [322.08, 327.35]},
+        {"name": "NVDA", "points": [206.64, 211.94]},
+    ]
+
+
 def test_soul_tells_the_model_the_capability_exists():
-    # the block is worthless if the default persona never mentions it
-    assert "waku-viz" in DEFAULT_SOUL
-    assert '"kind":"line"' in DEFAULT_SOUL.replace(" ", "")
+    # the block is worthless if the assembled system prompt never describes it,
+    # and it must reach installs whose SOUL.md predates the feature
+    settings = load_settings()
+    settings.ensure_home()
+    system = Session(settings, memory=None).build_system("how's TSLA doing this month?")
+    assert "waku-viz" in system
+    assert '"kind":"line"' in system.replace(" ", "")
